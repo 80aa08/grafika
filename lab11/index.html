@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Moving Squares</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="glcanvas"></canvas>
+    <script id="vertex-shader" type="x-shader/x-vertex">
+         attribute vec2 a_position;
+         attribute vec3 a_color;
+         uniform vec2 u_resolution;
+         uniform vec2 u_mouse;
+         varying vec3 v_color;
+         void main() {
+         vec2 zeroToOne = a_position / u_resolution;
+         vec2 zeroToTwo = zeroToOne * 2.0;
+         vec2 clipSpace = zeroToTwo - 1.0;
+         gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+         gl_PointSize = 10.0;
+         v_color = a_color;
+         }
+      </script>
+    <script id="fragment-shader" type="x-shader/x-fragment">
+         precision mediump float;
+         varying vec3 v_color;
+         uniform int u_pointStyle;
+         void main() {
+         if (u_pointStyle == 0) {
+         // Square
+         gl_FragColor = vec4(v_color, 1.0);
+         } else if (u_pointStyle == 1) {
+         // Disk
+         float dist = distance(vec2(0.5), gl_PointCoord);
+         if (dist > 0.5) {
+         discard;
+         }
+         gl_FragColor = vec4(v_color, 1.0);
+         } else if (u_pointStyle == 2) {
+         // Gradient disk
+         float dist = distance(vec2(0.5), gl_PointCoord);
+         if (dist > 0.5) {
+         discard;
+         }
+         gl_FragColor = vec4(v_color, 1.0 - dist);
+         }
+         }
+      </script>
+    <script>
+        let canvas;
+        let gl;
+        let program;
+        let positionBuffer;
+        let colorBuffer;
+        let a_position;
+        let a_color;
+        let u_resolution;
+        let u_mouse;
+        let u_pointStyle;
+        let colorsEnabled = true;
+        let pointStyle = 0;
+        let mouseX = 0;
+        let mouseY = 0;
+        let squares = [];
+        const numSquares = 100;
+        function initGL() {
+            canvas = document.getElementById('glcanvas');
+            gl = canvas.getContext('webgl');
+            const vertexShaderSource = document.getElementById('vertex-shader').text;
+            const fragmentShaderSource = document.getElementById('fragment-shader').text;
+            const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+            const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER,
+                fragmentShaderSource);
+            program = createProgram(gl, vertexShader, fragmentShader);
+            a_position = gl.getAttribLocation(program, 'a_position');
+            a_color = gl.getAttribLocation(program, 'a_color');
+            u_resolution = gl.getUniformLocation(program, 'u_resolution');
+            u_mouse = gl.getUniformLocation(program, 'u_mouse');
+            u_pointStyle = gl.getUniformLocation(program, 'u_pointStyle');
+            positionBuffer = gl.createBuffer();
+            colorBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(numSquares * 2),
+                gl.STATIC_DRAW);
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            const colors = new Float32Array(numSquares * 3);
+            for (let i = 0; i < colors.length; i++) {
+                colors[i] = Math.random();
+            }
+            gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
+            for (let i = 0; i < numSquares; i++) {
+                squares.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    dx: (Math.random() - 0.5) * 2,
+                    dy: (Math.random() - 0.5) * 2
+                });
+            }
+            window.addEventListener('resize', resizeCanvas);
+            window.addEventListener('keydown', doKey);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            resizeCanvas();
+            requestAnimationFrame(render);
+        }
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            const success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+            if (!success) {
+                console.log(gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+        function createProgram(gl, vertexShader, fragmentShader) {
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            const success = gl.getProgramParameter(program, gl.LINK_STATUS);
+            if (!success) {
+                console.log(gl.getProgramInfoLog(program));
+                gl.deleteProgram(program);
+                return null;
+            }
+            return program;
+        }
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        }
+        function doKey(event) {
+            switch (event.keyCode) {
+                case 32: // Space to pause/resume
+                    if (animationFrame) {
+                        cancelAnimationFrame(animationFrame);
+                        animationFrame = null;
+                    } else {
+                        requestAnimationFrame(render);
+                    }
+                    break;
+                case 49: // 1 to switch to square style
+                    pointStyle = 0;
+                    break;
+                case 50: // 2 to switch to disk style
+                    pointStyle = 1;
+                    break;
+                case 51: // 3 to switch to gradient disk style
+                    pointStyle = 2;
+                    break;
+                case 67: // C to toggle colors
+                    colorsEnabled = !colorsEnabled;
+                    break;
+                default:
+                    break;
+            }
+        }
+        function handleMouseMove(event) {
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+        }
+        function handleMouseDown(event) {
+            if (event.button === 0) {
+                for (let square of squares) {
+                    square.dx = (mouseX - square.x) * 0.05;
+                    square.dy = (mouseY - square.y) * 0.05;
+                }
+            }
+        }
+        function handleMouseUp(event) {
+            if (event.button === 0) {
+                for (let square of squares) {
+                    square.dx = (Math.random() - 0.5) * 2;
+                    square.dy = (Math.random() - 0.5) * 2;
+                }
+            }
+        }
+        function updateForFrame() {
+            for (let square of squares) {
+                square.x += square.dx;
+                square.y += square.dy;
+                if (square.x < 0 || square.x > canvas.width) square.dx = -square.dx;
+                if (square.y < 0 || square.y > canvas.height) square.dy = -square.dy;
+            }
+            const positions = new Float32Array(numSquares * 2);
+            for (let i = 0; i < numSquares; i++) {
+                positions[i * 2] = squares[i].x;
+                positions[i * 2 + 1] = squares[i].y;
+            }
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
+        }
+        function render() {
+            updateForFrame();
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.useProgram(program);
+            gl.enableVertexAttribArray(a_position);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
+            if (colorsEnabled) {
+                gl.enableVertexAttribArray(a_color);
+                gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                gl.vertexAttribPointer(a_color, 3, gl.FLOAT, false, 0, 0);
+            } else {
+                gl.disableVertexAttribArray(a_color);
+                gl.vertexAttrib3f(a_color, 1.0, 0.0, 0.0);
+            }
+            gl.uniform2f(u_resolution, canvas.width, canvas.height);
+            gl.uniform1i(u_pointStyle, pointStyle);
+            gl.drawArrays(gl.POINTS, 0, numSquares);
+            animationFrame = requestAnimationFrame(render);
+        }
+        let animationFrame = null;
+        initGL();
+    </script>
+</body>
+
+</html>

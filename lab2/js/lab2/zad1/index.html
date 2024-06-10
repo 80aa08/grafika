@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="UTF-8">
+    <title>CPSC 424, Lab 2, Exercise 1</title>
+</head>
+
+<body>
+    <canvas id="canvas" width="1000" height="1000"></canvas>
+    <img src="123.png">
+    <script>
+        var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext('2d');
+        const a = 2 * Math.PI / 6;
+        const r = 100;
+
+        function drawHexagon(x, y) {
+            ctx.beginPath();
+            for (var i = 0; i < 6; i++) {
+                ctx.lineTo(x + r * Math.cos(a * i), y + r * Math.sin(a * i));
+            }
+            ctx.fillStyle = "#A000FF";
+            ctx.fill();
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        function drawEyes(x, y) {
+            ctx.beginPath();
+            ctx.arc(x - 40, y - 20, 10, 0, 2 * Math.PI);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.arc(x - 40, y - 20, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = "black";
+            ctx.fill();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.arc(x - 41, y - 22, 2, 0, 2 * Math.PI);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.arc(x + 40, y - 20, 10, 0, 2 * Math.PI);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.arc(x + 40, y - 20, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = "black";
+            ctx.fill();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.arc(x + 39, y - 22, 2, 0, 2 * Math.PI);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawMouth(x, y) {
+            ctx.beginPath();
+            ctx.arc(x, y + 20, 20, 0, Math.PI);
+            ctx.fillStyle = "black";
+            ctx.fill();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.rect(x - 6, y + 20, 5, 7);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.rect(x, y + 20, 5, 7);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.moveTo(x - 15, y + 15);
+            ctx.lineTo(x - 25, y + 25);
+            ctx.moveTo(x + 15, y + 15);
+            ctx.lineTo(x + 25, y + 25);
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        drawHexagon(250, 250);
+        drawEyes(250, 250);
+        drawMouth(250, 250);
+    </script>
+</body>
+
+</html>
